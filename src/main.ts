@@ -7,7 +7,11 @@ import './plugins/registerServiceWorker';
 
 import './styles/main.scss';
 
+import Auth from '@/services/Auth';
+
 Vue.config.productionTip = false;
+
+Vue.prototype.$auth = Auth;
 
 new Vue({
     render: h => h(App),

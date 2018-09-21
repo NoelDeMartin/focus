@@ -1,0 +1,9 @@
+type Task {
+    id: ID!
+    name: String!
+    description: String
+    author_id: ID! @auto(value: "auth.id")
+    created_at: Date! @auto
+    updated_at: Date! @auto
+    completed_at: Date
+}

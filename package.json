@@ -22,6 +22,7 @@
     "@vue/cli-service": "^3.0.0",
     "@vue/eslint-config-typescript": "^3.0.1",
     "node-sass": "^4.9.0",
+    "raw-loader": "^0.5.1",
     "sass-loader": "^7.0.1",
     "typescript": "^3.0.0",
     "vue-cli-plugin-vuetify": "^0.1.6",
