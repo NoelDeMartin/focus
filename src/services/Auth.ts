@@ -7,18 +7,26 @@ import Reactive from '@/utils/Reactive';
 
 interface Data {
     accessToken: string | null;
-    expiresAt: Date | null;
+    clientDomain: string | null;
 }
 
 export class Auth {
 
     private data: Data = Reactive.object({
         accessToken: null,
-        expiresAt: null,
+        clientDomain: null,
     });
 
     public get loggedIn(): boolean {
-        return !!this.data.accessToken;
+        return this.data.accessToken !== null;
+    }
+
+    public get accessToken(): string {
+        return this.data.accessToken as string;
+    }
+
+    public get clientDomain(): string {
+        return this.data.clientDomain as string;
     }
 
     public async init(): Promise<void> {
@@ -31,8 +39,13 @@ export class Auth {
         } else if (Storage.has('credentials')) {
             const credentials = Storage.get('credentials');
 
-            this.data.accessToken = credentials.access_token;
-            this.data.expiresAt = new Date(credentials.expires_at);
+            if (Date.now() < credentials.expires_at) {
+                this.data.accessToken = credentials.access_token;
+                this.data.clientDomain = Storage.get('client').domain;
+            } else {
+                this.requestCode();
+            }
+
         }
     }
 
@@ -66,14 +79,7 @@ export class Auth {
                         domain: domain,
                     });
 
-                    const state = Storage.set('state', Str.random());
-
-                    window.location.href =
-                        domain + '/authorize' +
-                        '?response_type=code' +
-                        '&client_id=' + response.client_id +
-                        '&redirect_uri=' + Config.base_url +
-                        '&state=' + state;
+                    this.requestCode();
                 } else {
                     // TODO handle invalid response
                 }
@@ -86,7 +92,19 @@ export class Auth {
         Storage.remove('state');
 
         this.data.accessToken = null;
-        this.data.expiresAt = null;
+        this.data.clientDomain = null;
+    }
+
+    private requestCode(): void {
+        const client = Storage.get('client');
+        const state = Storage.set('state', Str.random());
+
+        window.location.href =
+            client.domain + '/authorize' +
+            '?response_type=code' +
+            '&client_id=' + client.id +
+            '&redirect_uri=' + Config.base_url +
+            '&state=' + state;
     }
 
     private async exchangeCode(code: string): Promise<void> {
@@ -112,7 +130,7 @@ export class Auth {
                 Storage.set('credentials', credentials);
 
                 this.data.accessToken = credentials.access_token;
-                this.data.expiresAt = new Date(credentials.expires_at);
+                this.data.clientDomain = client.domain;
 
                 window.history.replaceState({}, document.title, Config.base_url);
             });

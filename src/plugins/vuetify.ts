@@ -3,6 +3,5 @@ import Vuetify from 'vuetify';
 
 import '@babel/polyfill';
 
-
 Vue.use(Vuetify, {
 });

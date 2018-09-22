@@ -6,6 +6,11 @@ module.exports = {
                     test: /\.graphql/,
                     use: 'raw-loader',
                 },
+                {
+                    test: /\.mjs$/,
+                    include: /node_modules/,
+                    type: 'javascript/auto',
+                },
             ],
         },
     },

@@ -13,7 +13,7 @@
         <v-list class="w-4/5">
             <template v-for="(task, index) of tasks">
                 <v-list-tile :key="index">
-                    {{ task }}
+                    {{ task.name }}
                 </v-list-tile>
                 <v-divider v-if="index !== tasks.length -1" :key="`divider-${index}`" />
             </template>
@@ -27,9 +27,14 @@
 <script lang="ts">
 import Vue from 'vue';
 
+import gql from 'graphql-tag';
+import ApolloClient, { ObservableQuery } from 'apollo-boost';
+
 interface ComponentData {
     newTask: string;
     tasks: string[];
+    client: ApolloClient<any>;
+    tasksQuery: ObservableQuery<any>;
 }
 
 export default Vue.extend({
@@ -37,13 +42,48 @@ export default Vue.extend({
         return {
             newTask: '',
             tasks: [],
+            client: null as any,
+            tasksQuery: null as any,
         };
+    },
+    created() {
+        this.client = new ApolloClient({
+            uri: this.$auth.clientDomain,
+            headers: {
+                Authorization: 'Bearer ' + this.$auth.accessToken,
+            },
+        });
+
+        this.tasksQuery = this.client.watchQuery({
+            query: gql`{tasks:getTasks{id,name,author_id,created_at,updated_at,completed_at}}`,
+        });
+
+        this.tasksQuery.subscribe(result => {
+            this.tasks.splice(0, this.tasks.length, ...result.data.tasks);
+        });
     },
     methods: {
         createTask() {
             if (this.newTask) {
-                this.tasks.push(this.newTask);
-                this.newTask = '';
+                // TODO show loading
+                this.client
+                    .mutate({
+                        mutation: gql`mutation ($name: String!) {
+                            createTask(name: $name) { id }
+                        }`,
+                        variables: {
+                            name: this.newTask,
+                        },
+                    })
+                    .then(() => {
+                        this.newTask = '';
+
+                        // TODO use subscriptions instead
+                        this.tasksQuery.refetch();
+                    })
+                    .catch(e => {
+                        console.error(e);
+                    });
             }
         },
     },
