@@ -20,7 +20,7 @@ interface ComponentData {
 export default Vue.extend({
     data(): ComponentData {
         return {
-            url: 'http://kinko.test/store',
+            url: '',
         };
     },
     methods: {
