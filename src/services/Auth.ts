@@ -1,30 +1,43 @@
-import { Str } from '@/utils/Str';
 import Config from '@/config.json';
+
 import Storage from '@/services/Storage';
+
+import Str from '@/utils/Str';
+import Reactive from '@/utils/Reactive';
+
+interface Data {
+    accessToken: string | null;
+    expiresAt: Date | null;
+}
 
 export class Auth {
 
-    // TODO store in Vuex for reactivity
-    // TODO add expiration
-    private accessToken?: string;
+    private data: Data = Reactive.object({
+        accessToken: null,
+        expiresAt: null,
+    });
+
+    public get loggedIn(): boolean {
+        return !!this.data.accessToken;
+    }
 
     public async init(): Promise<void> {
         const params = new URL(window.location.href).searchParams;
 
         if (params.has('code') && params.get('state') === Storage.get('state')) {
-            const storeDomain = Storage.get('storeDomain');
-
-            Storage.remove('storeDomain');
             Storage.remove('state');
 
-            await this.exchangeCode(storeDomain, params.get('code') as string);
-        } else if (Storage.has('accessToken')) {
-            this.accessToken = Storage.get('accessToken');
+            await this.exchangeCode(params.get('code') as string);
+        } else if (Storage.has('credentials')) {
+            const credentials = Storage.get('credentials');
+
+            this.data.accessToken = credentials.access_token;
+            this.data.expiresAt = new Date(credentials.expires_at);
         }
     }
 
-    public async login(storeDomain: string): Promise<void> {
-        await fetch(storeDomain + '/register', {
+    public async login(domain: string): Promise<void> {
+        await fetch(domain + '/register', {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -48,53 +61,61 @@ export class Auth {
                 if (response.redirect) { // Why and when??
                     window.location.href = response.redirect;
                 } else if (response.client_id) {
-                    // TODO store together with store domain and with a custom format
-                    Storage.set('client', response);
+                    Storage.set('client', {
+                        id: response.client_id,
+                        domain: domain,
+                    });
 
-                    this.requestCode(storeDomain);
+                    const state = Storage.set('state', Str.random());
+
+                    window.location.href =
+                        domain + '/authorize' +
+                        '?response_type=code' +
+                        '&client_id=' + response.client_id +
+                        '&redirect_uri=' + Config.base_url +
+                        '&state=' + state;
                 } else {
                     // TODO handle invalid response
                 }
             });
     }
 
-    protected requestCode(storeDomain: string): void {
-        const client = Storage.get('client');
-        const state = Storage.set('state', Str.random());
+    public logout(): void {
+        Storage.remove('client');
+        Storage.remove('credentials');
+        Storage.remove('state');
 
-        Storage.set('storeDomain', storeDomain);
-
-        window.location.href =
-            storeDomain + '/authorize' +
-                '?response_type=code' +
-                '&client_id=' + client.client_id +
-                '&redirect_uri=' + Config.base_url +
-                '&state=' + state;
+        this.data.accessToken = null;
+        this.data.expiresAt = null;
     }
 
-    private async exchangeCode(storeDomain: string, code: string): Promise<void> {
+    private async exchangeCode(code: string): Promise<void> {
         const client = Storage.get('client');
         const params = new FormData();
 
         params.append('grant_type', 'authorization_code');
         params.append('code', code);
-        params.append('client_id', client.client_id);
+        params.append('client_id', client.id);
         params.append('redirect_uri', Config.base_url);
 
-        await fetch(storeDomain + '/token', {
+        await fetch(client.domain + '/token', {
             method: 'POST',
             body: params,
         })
             .then(res => res.json())
             .then(res => {
-                Storage.set('accessToken', res.access_token);
+                const credentials = {
+                    access_token: res.access_token,
+                    expires_at: Date.now() + (res.expires_in * 1000),
+                };
 
-                window.location.href = Config.base_url;
+                Storage.set('credentials', credentials);
+
+                this.data.accessToken = credentials.access_token;
+                this.data.expiresAt = new Date(credentials.expires_at);
+
+                window.history.replaceState({}, document.title, Config.base_url);
             });
-    }
-
-    public get loggedIn(): boolean {
-        return !!this.accessToken;
     }
 
 }

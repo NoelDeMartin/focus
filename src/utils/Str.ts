@@ -1,4 +1,4 @@
-export class Str {
+export default class Str {
 
     public static random(length: number = 16): string {
         let text = '';

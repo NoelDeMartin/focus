@@ -1,5 +1,8 @@
 <template>
     <div class="bg-background w-screen h-screen flex flex-col items-center justify-center">
+        <div class="fixed pin-r pin-t m-4">
+            <a @click="$auth.logout()">Logout</a>
+        </div>
         <h1 class="text-4xl">Focus 省</h1>
         <v-form class="w-4/5" @submit.prevent="createTask">
             <div class="flex">

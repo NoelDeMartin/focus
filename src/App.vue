@@ -1,7 +1,7 @@
 <template>
     <v-app>
         <Splash v-if="loading"/>
-        <Home v-else-if="loggedIn" />
+        <Home v-else-if="$auth.loggedIn" />
         <Login v-else />
     </v-app>
 </template>
@@ -22,16 +22,12 @@ export default Vue.extend({
     data() {
         return {
             loading: true,
-
-            // TODO replace with vuex
-            loggedIn: false,
         };
     },
     mounted() {
         this.$auth
             .init()
             .then(() => {
-                this.loggedIn = this.$auth.loggedIn;
                 this.loading = false;
             });
     },
