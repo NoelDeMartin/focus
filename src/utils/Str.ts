@@ -11,4 +11,9 @@ export default class Str {
         return text;
     }
 
+    public static plural(text: string): string {
+        // TODO use inflection library
+        return text + 's';
+    }
+
 }

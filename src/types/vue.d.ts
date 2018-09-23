@@ -1,7 +1,7 @@
-import { Auth } from '../services/Auth';
+import Auth from '../services/Auth';
 
 declare module "vue/types/vue" {
     interface Vue {
-        $auth: Auth;
+        $auth: typeof Auth;
     }
 }

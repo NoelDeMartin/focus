@@ -1,11 +1,13 @@
 import Vue from 'vue';
 
-import App from './App.vue';
+import App from '@/App.vue';
 
-import './plugins/vuetify';
-import './plugins/registerServiceWorker';
+import '@/soukai/soukai';
 
-import './styles/main.scss';
+import '@/plugins/vuetify';
+import '@/plugins/registerServiceWorker';
+
+import '@/styles/main.scss';
 
 import Auth from '@/services/Auth';
 

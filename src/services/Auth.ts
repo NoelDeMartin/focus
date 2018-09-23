@@ -1,3 +1,5 @@
+import { Observable, BehaviorSubject } from 'rxjs';
+
 import Config from '@/config.json';
 
 import Storage from '@/services/Storage';
@@ -10,7 +12,9 @@ interface Data {
     clientDomain: string | null;
 }
 
-export class Auth {
+class Auth {
+
+    private status: BehaviorSubject<boolean> = new BehaviorSubject(false);
 
     private data: Data = Reactive.object({
         accessToken: null,
@@ -29,6 +33,10 @@ export class Auth {
         return this.data.clientDomain as string;
     }
 
+    public get observable(): Observable<boolean> {
+        return this.status.asObservable();
+    }
+
     public async init(): Promise<void> {
         const params = new URL(window.location.href).searchParams;
 
@@ -42,6 +50,8 @@ export class Auth {
             if (Date.now() < credentials.expires_at) {
                 this.data.accessToken = credentials.access_token;
                 this.data.clientDomain = Storage.get('client').domain;
+
+                this.status.next(true);
             } else {
                 this.requestCode();
             }
@@ -93,6 +103,8 @@ export class Auth {
 
         this.data.accessToken = null;
         this.data.clientDomain = null;
+
+        this.status.next(false);
     }
 
     private requestCode(): void {
@@ -133,6 +145,8 @@ export class Auth {
                 this.data.clientDomain = client.domain;
 
                 window.history.replaceState({}, document.title, Config.base_url);
+
+                this.status.next(true);
             });
     }
 
