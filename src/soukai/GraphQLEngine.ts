@@ -34,7 +34,7 @@ export default class implements Engine {
                     mutation: gql`mutation (${mutationArguments.typed}) {
                         create${name}(${mutationArguments.object}) { id }
                     }`,
-                    variables: attributes,
+                    variables: mutationArguments.attributes,
                 })
                 .then(res => this.graphQLResult(res))
                 .then(res => res.id);
@@ -74,7 +74,7 @@ export default class implements Engine {
         return this.withClient(client => {
             const attributes: any = Object.assign({}, dirtyAttributes);
             attributes[model.primaryKey] = id;
-            for (const field in removedAttributes) {
+            for (const field of removedAttributes) {
                 attributes[field] = null;
             }
 
@@ -86,7 +86,7 @@ export default class implements Engine {
                     mutation: gql`mutation (${mutationArguments.typed}) {
                         update${name}(${mutationArguments.object}) { id }
                     }`,
-                    variables: attributes,
+                    variables: mutationArguments.attributes,
                 })
                 .then(res => this.graphQLResult(res))
                 .then(res => res.id);
@@ -113,42 +113,55 @@ export default class implements Engine {
 
 }
 
-function buildMutationArguments(model: typeof Model, attributes: any): { typed: string, object: string } {
-    const mutationArguments: { [key: string]: string } = {};
-    for (const field in model.fields) {
+function buildMutationArguments(model: typeof Model, attributes: any): {
+    typed: string,
+    object: string,
+    attributes: any,
+} {
+    const mutationArguments: { [key: string]: string | null } = {};
+    const emptyArguments = [];
+    for (const field of Object.keys(model.fields)) {
         if (field in attributes) {
-            switch (model.fields[field].type) {
-                case FieldType.Number:
-                    mutationArguments[field] = 'Float';
-                    break;
-                case FieldType.String:
-                    mutationArguments[field] = 'String';
-                    break;
-                case FieldType.Boolean:
-                    mutationArguments[field] = 'Boolean';
-                    break;
-                case FieldType.Array:
-                    // TODO
-                    break;
-                case FieldType.Object:
-                    // TODO
-                    break;
-                case FieldType.Date:
-                    mutationArguments[field] = 'Date';
-                    break;
-                case FieldType.Key:
-                    mutationArguments[field] = 'ID';
-                    break;
+            if (attributes[field] === null) {
+                delete attributes[field];
+                emptyArguments.push(field);
+            } else {
+                switch (model.fields[field].type) {
+                    case FieldType.Number:
+                        mutationArguments[field] = 'Float';
+                        break;
+                    case FieldType.String:
+                        mutationArguments[field] = 'String';
+                        break;
+                    case FieldType.Boolean:
+                        mutationArguments[field] = 'Boolean';
+                        break;
+                    case FieldType.Array:
+                        // TODO
+                        break;
+                    case FieldType.Object:
+                        // TODO
+                        break;
+                    case FieldType.Date:
+                        mutationArguments[field] = 'Date';
+                        break;
+                    case FieldType.Key:
+                        mutationArguments[field] = 'ID';
+                        break;
+                }
             }
         }
     }
 
     return {
         typed: Object.keys(mutationArguments)
+            .filter(value => value !== null)
             .map(key => `$${key}: ${mutationArguments[key]}!`)
             .join(', '),
         object: Object.keys(mutationArguments)
-            .map(key => `${key}: $${key}`)
+            .map((key, value) => value !== null ? `${key}: $${key}` : `${key}: null`)
+            .concat(emptyArguments.map(field => `${field}: null`))
             .join(', '),
+        attributes,
     };
 }

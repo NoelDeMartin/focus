@@ -1,10 +1,10 @@
 <template>
-    <v-list-tile>
+    <v-list-tile class="task-list-item">
         <v-checkbox
             :input-value="task.completed"
             :label="task.name"
             :class="{
-                'line-through': task.completed
+                'completed': task.completed
             }"
             @change="toggle"
         />
@@ -33,3 +33,9 @@ export default Vue.extend({
     },
 });
 </script>
+
+<style lang="scss">
+    .task-list-item .completed label {
+        @apply .line-through;
+    }
+</style>

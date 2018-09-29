@@ -21,6 +21,8 @@ export default class Task extends Model {
         if (this.completed) {
             this.unsetAttribute('completed_at');
         } else {
+            // TODO allow server to set date instead
+
             this.setAttribute('completed_at', new Date());
         }
 
