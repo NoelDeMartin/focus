@@ -13,7 +13,24 @@ export default class Str {
 
     public static plural(text: string): string {
         // TODO use inflection library
-        return text + 's';
+        if (!text.endsWith('s')) {
+            text = text + 's';
+        }
+
+        return text;
+    }
+
+    public static singular(text: string): string {
+        // TODO use inflection library
+        if (text.endsWith('s')) {
+            text = text.substr(text.length - 2);
+        }
+
+        return text;
+    }
+
+    public static capitalize(text: string): string {
+        return text.substr(0, 1).toUpperCase() + text.substr(1);
     }
 
 }

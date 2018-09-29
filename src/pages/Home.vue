@@ -10,17 +10,7 @@
                 <v-btn color="primary" @click="createTask">Add</v-btn>
             </div>
         </v-form>
-        <v-list class="w-4/5 mb-4 overflow-auto">
-            <template v-for="(task, index) of tasks">
-                <v-list-tile :key="index">
-                    {{ task.name }}
-                </v-list-tile>
-                <v-divider v-if="index !== tasks.length -1" :key="`divider-${index}`" />
-            </template>
-            <v-list-tile v-if="tasks.length === 0" class="text-grey-darker">
-                No tasks
-            </v-list-tile>
-        </v-list>
+        <TasksList :tasks="tasks" />
     </div>
 </template>
 
@@ -29,12 +19,17 @@ import Vue from 'vue';
 
 import Task from '@/soukai/models/Task';
 
+import TasksList from '@/components/TasksList.vue';
+
 interface ComponentData {
     newTask: string;
     tasks: Task[];
 }
 
 export default Vue.extend({
+    components: {
+        TasksList,
+    },
     data(): ComponentData {
         return {
             newTask: '',
@@ -58,7 +53,7 @@ export default Vue.extend({
             }
         },
         updateTasks() {
-            Task.all().then(tasks => {
+            Task.all<Task>().then(tasks => {
                 this.tasks.splice(0, this.tasks.length, ...tasks);
             });
         },

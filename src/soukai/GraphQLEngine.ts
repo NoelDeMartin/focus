@@ -26,49 +26,13 @@ export default class implements Engine {
 
     public create(model: typeof Model, attributes: Database.Attributes): Promise<Database.Key> {
         return this.withClient(client => {
-            const name = model.modelName;
-
-            const mutationArguments: { [key: string]: string } = {};
-            for (const field in model.fields) {
-                if (field in attributes) {
-                    switch (model.fields[field].type) {
-                        case FieldType.Number:
-                            mutationArguments[field] = 'Float';
-                            break;
-                        case FieldType.String:
-                            mutationArguments[field] = 'String';
-                            break;
-                        case FieldType.Boolean:
-                            mutationArguments[field] = 'Boolean';
-                            break;
-                        case FieldType.Array:
-                            // TODO
-                            break;
-                        case FieldType.Object:
-                            // TODO
-                            break;
-                        case FieldType.Date:
-                            mutationArguments[field] = 'Date';
-                            break;
-                        case FieldType.Key:
-                            mutationArguments[field] = 'ID';
-                            break;
-                    }
-                }
-            }
-
-            const typedArguments = Object.keys(mutationArguments)
-                .map(key => `$${key}: ${mutationArguments[key]}!`)
-                .join(', ');
-
-            const functionArguments = Object.keys(mutationArguments)
-                .map(key => `${key}: $${key}`)
-                .join(', ');
+            const name = Str.capitalize(Str.singular(model.collection));
+            const mutationArguments = buildMutationArguments(model, attributes);
 
             return client
                 .mutate({
-                    mutation: gql`mutation (${typedArguments}) {
-                        create${name}(${functionArguments}) { id }
+                    mutation: gql`mutation (${mutationArguments.typed}) {
+                        create${name}(${mutationArguments.object}) { id }
                     }`,
                     variables: attributes,
                 })
@@ -85,13 +49,12 @@ export default class implements Engine {
 
     public readMany(model: typeof Model): Promise<Database.Document[]> {
         return this.withClient(client => {
-            const name = model.modelName;
-            const pluralName = Str.plural(name);
+            const name = Str.capitalize(Str.plural(model.collection));
 
             return client
                 .query({
                     query: gql`{
-                        models: get${pluralName}{
+                        models: get${name}{
                             ${Object.keys(model.fields).join(',')}
                         }
                     }`,
@@ -108,9 +71,26 @@ export default class implements Engine {
         dirtyAttributes: Database.Attributes,
         removedAttributes: string[],
     ): Promise<void> {
-        // TODO
+        return this.withClient(client => {
+            const attributes: any = Object.assign({}, dirtyAttributes);
+            attributes[model.primaryKey] = id;
+            for (const field in removedAttributes) {
+                attributes[field] = null;
+            }
 
-        return Promise.resolve();
+            const name = Str.capitalize(Str.singular(model.modelName));
+            const mutationArguments = buildMutationArguments(model, attributes);
+
+            return client
+                .mutate({
+                    mutation: gql`mutation (${mutationArguments.typed}) {
+                        update${name}(${mutationArguments.object}) { id }
+                    }`,
+                    variables: attributes,
+                })
+                .then(res => this.graphQLResult(res))
+                .then(res => res.id);
+        });
     }
 
     public delete(model: typeof Model, id: Database.Key): Promise<void> {
@@ -131,4 +111,44 @@ export default class implements Engine {
         }
     }
 
+}
+
+function buildMutationArguments(model: typeof Model, attributes: any): { typed: string, object: string } {
+    const mutationArguments: { [key: string]: string } = {};
+    for (const field in model.fields) {
+        if (field in attributes) {
+            switch (model.fields[field].type) {
+                case FieldType.Number:
+                    mutationArguments[field] = 'Float';
+                    break;
+                case FieldType.String:
+                    mutationArguments[field] = 'String';
+                    break;
+                case FieldType.Boolean:
+                    mutationArguments[field] = 'Boolean';
+                    break;
+                case FieldType.Array:
+                    // TODO
+                    break;
+                case FieldType.Object:
+                    // TODO
+                    break;
+                case FieldType.Date:
+                    mutationArguments[field] = 'Date';
+                    break;
+                case FieldType.Key:
+                    mutationArguments[field] = 'ID';
+                    break;
+            }
+        }
+    }
+
+    return {
+        typed: Object.keys(mutationArguments)
+            .map(key => `$${key}: ${mutationArguments[key]}!`)
+            .join(', '),
+        object: Object.keys(mutationArguments)
+            .map(key => `${key}: $${key}`)
+            .join(', '),
+    };
 }
