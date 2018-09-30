@@ -1,6 +1,6 @@
 import Soukai, { definitionsFromContext } from 'soukai';
 
-import GraphQLEngine from '@/soukai/GraphQLEngine';
+import RDFEngine from '@/soukai/RDFEngine';
 
-Soukai.useEngine(new GraphQLEngine);
+Soukai.useEngine(new RDFEngine);
 Soukai.loadModels(definitionsFromContext(require.context('@/soukai/models')));
