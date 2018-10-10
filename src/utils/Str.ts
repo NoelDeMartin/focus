@@ -23,7 +23,7 @@ export default class Str {
     public static singular(text: string): string {
         // TODO use inflection library
         if (text.endsWith('s')) {
-            text = text.substr(text.length - 2);
+            text = text.substr(0, text.length - 1);
         }
 
         return text;
